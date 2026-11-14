@@ -348,3 +348,66 @@ def test_a_second_report_replaces_the_snapshot(tmp_path, capsys):
     assert run(args) == 0
     assert run(args) == 0
     assert (tmp_path / ".metrics" / "dry.edn").read_text(encoding="utf-8") == "{:candidates []}\n"
+
+
+def _selected_names(tmp_path, *extra):
+    options = parse_args(["--root", str(tmp_path), *extra])
+    return [path.relative_to(tmp_path).as_posix() for path in select_files(options)]
+
+
+def test_exclude_is_repeatable_and_collects_patterns():
+    options = parse_args(["--exclude", "a.py", "--exclude", "gen/*", "src"])
+    assert options.excludes == ["a.py", "gen/*"]
+    assert options.positionals == ["src"]
+    assert parse_args([]).excludes == []
+
+
+def test_exclude_requires_a_value(capsys):
+    assert run(["--exclude"]) == 1
+    assert "--exclude requires a value" in capsys.readouterr().err
+
+
+def test_exclude_matches_a_bare_file_name_in_any_directory(tmp_path):
+    write_source(tmp_path, "pkg_a/guard.py", "x = 1\n")
+    write_source(tmp_path, "pkg_b/deep/guard.py", "x = 1\n")
+    write_source(tmp_path, "pkg_a/keep.py", "x = 1\n")
+    assert _selected_names(tmp_path, "--exclude", "guard.py") == ["pkg_a/keep.py"]
+
+
+def test_exclude_matches_a_path_glob_relative_to_the_root(tmp_path):
+    write_source(tmp_path, "plugins/a/lib/guard.py", "x = 1\n")
+    write_source(tmp_path, "plugins/b/lib/guard.py", "x = 1\n")
+    write_source(tmp_path, "other/lib/guard.py", "x = 1\n")
+    assert _selected_names(tmp_path, "--exclude", "plugins/*/lib/*.py") == ["other/lib/guard.py"]
+
+
+def test_exclude_does_not_match_a_partial_path_or_name(tmp_path):
+    write_source(tmp_path, "src/guard.py", "x = 1\n")
+    write_source(tmp_path, "src/guard_two.py", "x = 1\n")
+    assert _selected_names(tmp_path, "--exclude", "guard") == ["src/guard.py", "src/guard_two.py"]
+    assert _selected_names(tmp_path, "--exclude", "src") == ["src/guard.py", "src/guard_two.py"]
+
+
+def test_exclude_applies_to_named_paths_and_repeats(tmp_path):
+    write_source(tmp_path, "src/a.py", "x = 1\n")
+    write_source(tmp_path, "src/b.py", "x = 1\n")
+    write_source(tmp_path, "src/c.py", "x = 1\n")
+    assert _selected_names(tmp_path, "--exclude", "a.py", "--exclude", "src/b.py", "src") == [
+        "src/c.py"
+    ]
+
+
+def test_exclude_removes_vendored_copies_from_the_report(tmp_path, capsys):
+    body = "def alpha(xs):\n    ys = filter(xs, odd)\n    zs = map(ys, inc)\n    return list(zs)\n"
+    write_source(tmp_path, "one/guard.py", body)
+    write_source(tmp_path, "two/guard.py", body)
+    args = ["--root", str(tmp_path), "--min-lines", "3", "--min-nodes", "1"]
+    assert run(args) == 0
+    assert "DUPLICATE score=1.00" in capsys.readouterr().out
+    assert run([*args, "--exclude", "guard.py"]) == 0
+    assert capsys.readouterr().out == "No source files to analyze.\n"
+
+
+def test_help_lists_exclude(capsys):
+    assert run(["--help"]) == 0
+    assert "--exclude" in capsys.readouterr().out

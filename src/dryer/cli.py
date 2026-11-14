@@ -6,11 +6,12 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 from dryer.discover import SKIP_DIRS, TEST_DIRS, is_test_file, iter_source_files, language_of
 from dryer.report import format_text, render_edn, write_metrics
-from dryer.scan import find_duplicates, scan_files
+from dryer.scan import display_path, find_duplicates, scan_files
 
 
 def _skipped_directory_text() -> str:
@@ -38,6 +39,9 @@ Options:
                                 Default: the current directory.
   -s, --source-root <path>      Walk this tree instead of the project root.
                                 May be repeated.
+  --exclude <glob>              Leave out files whose path, relative to the
+                                project root, or whose file name matches this
+                                glob. May be repeated.
   --changed                     Compare added and modified source files from
                                 git status.
   --threshold N                 Minimum similarity score, default 0.82.
@@ -75,6 +79,7 @@ class Options:
     exit_code: int = 0
     project_root: Path = field(default_factory=lambda: Path("."))
     source_roots: list[str] = field(default_factory=list)
+    excludes: list[str] = field(default_factory=list)
     positionals: list[str] = field(default_factory=list)
     threshold: float = 0.82
     min_lines: int = 4
@@ -117,6 +122,10 @@ def parse_args(argv: list[str] | None = None) -> Options:
             arg = args[index]
             if arg in {"-s", "--source-root"}:
                 options.source_roots.append(_take(args, index, arg))
+                index += 2
+                continue
+            if arg == "--exclude":
+                options.excludes.append(_take(args, index, arg))
                 index += 2
                 continue
             if arg == "--root":
@@ -276,10 +285,24 @@ def _apply_filters(files: list[Path], filters: list[str]) -> list[Path]:
     return [path for path in files if any(item in path.as_posix() for item in filters)]
 
 
+def _excluded(path: Path, root: Path, patterns: list[str]) -> bool:
+    relative = display_path(path, root)
+    return any(
+        fnmatchcase(relative, pattern) or fnmatchcase(path.name, pattern) for pattern in patterns
+    )
+
+
+def _apply_excludes(files: list[Path], root: Path, patterns: list[str]) -> list[Path]:
+    if not patterns:
+        return files
+    return [path for path in files if not _excluded(path, root, patterns)]
+
+
 def select_files(options: Options) -> list[Path]:
     root = options.project_root.resolve()
     existing, filters = _positionals(root, options.positionals)
     files = _apply_filters(_selected(options, root, existing), filters)
+    files = _apply_excludes(files, root, options.excludes)
     return sorted({path.resolve() for path in files}, key=lambda path: path.as_posix())
 
 
