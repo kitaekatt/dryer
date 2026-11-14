@@ -141,6 +141,22 @@ def _gdscript_nodes(data: bytes, root) -> list:
     ]
 
 
+def _cpp_nodes(data: bytes, root) -> list:
+    """Functions and methods with a body, including constructors and inline methods.
+
+    Lambdas are not function definitions, so they stay inside the enclosing
+    function. A class defined inside a function body is skipped with it.
+    """
+
+    return [
+        node
+        for node in descendants(root)
+        if node.type == "function_definition"
+        and _has(node, "compound_statement")
+        and not _inside(node, {"function_definition"})
+    ]
+
+
 def _rust_nodes(data: bytes, root) -> list:
     found = []
     for node in descendants(root):
@@ -161,6 +177,7 @@ _PICKERS = {
     "typescript": (_grammar, _typescript_nodes),
     "rust": ("rust", _rust_nodes),
     "gdscript": ("gdscript", _gdscript_nodes),
+    "cpp": ("cpp", _cpp_nodes),
 }
 
 

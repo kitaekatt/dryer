@@ -28,6 +28,7 @@ _IDENTIFIERS = {
     "shorthand_property_identifier",
     "shorthand_property_identifier_pattern",
     "package_identifier",
+    "namespace_identifier",
 }
 
 _LITERALS = {
@@ -48,6 +49,8 @@ _LITERALS = {
     "decimal_floating_point_literal",
     "hex_floating_point_literal",
     "int_literal",
+    "number_literal",
+    "nullptr",
     "float_literal",
     "imaginary_literal",
     "integer_literal",
@@ -133,6 +136,7 @@ _ATTRIBUTES = {
 _SCOPED = {
     "scoped_identifier",
     "scoped_type_identifier",
+    "qualified_identifier",
 }
 
 _ARG_LISTS = {"argument_list", "arguments"}

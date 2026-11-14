@@ -109,6 +109,7 @@ DUPLICATE score=0.89
 | Rust | functions and methods with a body | functions inside `mod tests`, and closures |
 | Python | functions and methods | functions nested inside another function |
 | GDScript (`.gd`) | functions, constructors, and inner-class methods | lambdas, which stay inside the enclosing function |
+| C++ (`.cpp` `.cc` `.cxx` `.hpp` `.hh` `.h`) | functions, methods, constructors, and destructors with a body | lambdas, `= default` and `= delete` members, and classes defined inside a function |
 
 Clojure reader conditionals keep the `:clj` branch, as dry4clj does. Syntax-quote is kept as a `syntax-quote` form rather than expanded.
 
