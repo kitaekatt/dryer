@@ -21,6 +21,12 @@ EXTENSIONS = {
     ".cts": "typescript",
     ".rs": "rust",
     ".py": "python",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
+    ".hh": "cpp",
+    ".h": "cpp",
 }
 
 SKIP_DIRS = {
