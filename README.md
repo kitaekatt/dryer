@@ -66,6 +66,7 @@ The first run creates `.venv` and installs the tool. From a project root it walk
 --min-lines N    Minimum source lines in a candidate form, default 4
 --min-nodes N    Minimum normalized syntax nodes, default 20
 --exclude GLOB   Leave out matching files, may be repeated
+--group-identical  Report identical forms (score 1.00) once as a group
 --format F       text or edn, default text
 --edn            Same as --format edn
 --text           Same as --format text
@@ -74,6 +75,8 @@ The first run creates `.venv` and installs the tool. From a project root it walk
 Normalized syntax nodes are the structural pieces left after incidental names and literals are replaced. `--min-nodes` drops forms smaller than that before comparison.
 
 `--exclude` takes a glob that is matched against each file's path relative to the project root (`--root`, default the current directory) and against its bare file name, so `--exclude bootstrap_guard.py` leaves out that file in every directory and `--exclude 'generated/*'` leaves out a tree. `*` also matches `/`. A pattern must match the whole path or the whole name. It applies to files named on the command line too. Use it for a file that is copied on purpose, such as a vendored helper. Quote the pattern so the shell does not expand it.
+
+`--group-identical` reports forms with identical structure (score `1.00`) once per set instead of once per pair, so `N` copies of a form give one candidate, not `N*(N-1)/2`. Candidates below `1.00` are unchanged, and so is a set of exactly two. A group lists every copy in text output (`DUPLICATE score=1.00 copies=3`), and in EDN the first two copies are `:left` and `:right` and the rest are in `:others`, a key present only for a group of three or more.
 
 Default text output for the invoice and receipt from dry4clj. They differ by one extra binding:
 

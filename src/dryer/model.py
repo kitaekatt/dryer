@@ -12,7 +12,10 @@ class Span:
 
 @dataclass(frozen=True)
 class Duplicate:
-    """One pair of forms whose normalized structure is similar enough to report."""
+    """One pair of forms whose normalized structure is similar enough to report.
+
+    `others` holds further forms identical to the pair, when identical forms are grouped.
+    """
 
     score: float
     language: str
@@ -20,6 +23,7 @@ class Duplicate:
     right: Span
     left_nodes: int
     right_nodes: int
+    others: tuple[Span, ...] = ()
 
 
 @dataclass(frozen=True)

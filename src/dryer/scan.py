@@ -61,8 +61,38 @@ def _duplicate_key(item: Duplicate):
     )
 
 
-def find_duplicates(entries: list[Entry], threshold: float) -> list[Duplicate]:
-    """Pair forms of the same language. Each unordered pair is reported once."""
+def _identical_groups(group: list[Entry]) -> list[Duplicate]:
+    """One candidate per set of two or more forms with the same fingerprints."""
+
+    classes: dict[frozenset[str], list[Entry]] = {}
+    for entry in group:
+        if not entry.fingerprints:
+            continue
+        members = classes.setdefault(entry.fingerprints, [])
+        if not any(_same_span(entry, seen) for seen in members):
+            members.append(entry)
+    return [
+        Duplicate(
+            score=1.0,
+            language=first.language,
+            left=Span(first.file, first.start_line, first.end_line),
+            right=Span(second.file, second.start_line, second.end_line),
+            left_nodes=first.nodes,
+            right_nodes=second.nodes,
+            others=tuple(Span(e.file, e.start_line, e.end_line) for e in rest),
+        )
+        for (first, second, *rest) in (m for m in classes.values() if len(m) > 1)
+    ]
+
+
+def find_duplicates(
+    entries: list[Entry], threshold: float, group_identical: bool = False
+) -> list[Duplicate]:
+    """Pair forms of the same language. Each unordered pair is reported once.
+
+    With `group_identical`, forms whose fingerprints are all the same are reported
+    once as a group instead of as every pair among them.
+    """
 
     by_language: dict[str, list[Entry]] = {}
     for entry in entries:
@@ -75,7 +105,7 @@ def find_duplicates(entries: list[Entry], threshold: float) -> list[Duplicate]:
                 if _same_span(left, right):
                     continue
                 score = jaccard(left.fingerprints, right.fingerprints)
-                if score < threshold:
+                if score < threshold or (group_identical and score == 1.0):
                     continue
                 found.append(
                     Duplicate(
@@ -87,5 +117,7 @@ def find_duplicates(entries: list[Entry], threshold: float) -> list[Duplicate]:
                         right_nodes=right.nodes,
                     )
                 )
+        if group_identical and threshold <= 1.0:
+            found.extend(_identical_groups(group))
     found.sort(key=_duplicate_key)
     return found

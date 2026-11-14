@@ -411,3 +411,63 @@ def test_exclude_removes_vendored_copies_from_the_report(tmp_path, capsys):
 def test_help_lists_exclude(capsys):
     assert run(["--help"]) == 0
     assert "--exclude" in capsys.readouterr().out
+
+
+COPY = "def {n}(xs):\n    ys = filter(xs, odd)\n    zs = map(ys, inc)\n    return list(zs)\n"
+NEAR = "def near(xs):\n    ys = filter(xs, odd)\n    zs = map(ys, inc)\n    return sorted(zs)\n"
+GROUP_ARGS = ["--min-lines", "3", "--min-nodes", "1"]
+
+
+def _three_copies(tmp_path):
+    for name in ("a", "b", "c"):
+        write_source(tmp_path, f"{name}.py", COPY.format(n=name))
+
+
+def test_identical_copies_are_paired_by_default(tmp_path, capsys):
+    _three_copies(tmp_path)
+    assert run(["--root", str(tmp_path), *GROUP_ARGS]) == 0
+    out = capsys.readouterr().out
+    assert out.count("DUPLICATE") == 3
+    assert parse_args(["--group-identical"]).group_identical is True
+    assert parse_args([]).group_identical is False
+
+
+def test_group_identical_reports_one_group_per_set_of_copies(tmp_path, capsys):
+    _three_copies(tmp_path)
+    assert run(["--root", str(tmp_path), *GROUP_ARGS, "--group-identical"]) == 0
+    out = capsys.readouterr().out
+    assert out == "DUPLICATE score=1.00 copies=3\n  a.py:1-4\n  b.py:1-4\n  c.py:1-4\n"
+
+
+def test_group_identical_edn_lists_the_other_copies(tmp_path, capsys):
+    _three_copies(tmp_path)
+    args = ["--root", str(tmp_path), *GROUP_ARGS, "--group-identical", "--edn"]
+    assert run(args) == 0
+    out = capsys.readouterr().out
+    assert out.count(":score") == 1
+    assert '  :right {:file "b.py", :start-line 1, :end-line 4}\n' in out
+    assert '  :others [{:file "c.py", :start-line 1, :end-line 4}]\n' in out
+
+
+def test_group_identical_leaves_pairs_and_near_matches_alone(tmp_path, capsys):
+    _three_copies(tmp_path)
+    write_source(tmp_path, "d.py", NEAR)
+    args = ["--root", str(tmp_path), *GROUP_ARGS, "--threshold", "0.5"]
+    assert run(args) == 0
+    plain = capsys.readouterr().out
+    assert run([*args, "--group-identical"]) == 0
+    grouped = capsys.readouterr().out
+    near_pairs = [block for block in plain.split("\n\n") if "d.py" in block]
+    assert len(near_pairs) == 3
+    assert all(block.strip() in grouped for block in near_pairs)
+    assert grouped.count("DUPLICATE score=1.00") == 1
+
+
+def test_group_identical_keeps_a_lone_identical_pair_unchanged(tmp_path, capsys):
+    write_source(tmp_path, "a.py", COPY.format(n="a"))
+    write_source(tmp_path, "b.py", COPY.format(n="b"))
+    args = ["--root", str(tmp_path), *GROUP_ARGS]
+    assert run(args) == 0
+    plain = capsys.readouterr().out
+    assert run([*args, "--group-identical"]) == 0
+    assert capsys.readouterr().out == plain
