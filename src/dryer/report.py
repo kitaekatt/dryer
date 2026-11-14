@@ -14,11 +14,10 @@ def format_text(candidates: list[Duplicate]) -> str:
     for candidate in candidates:
         left = candidate.left
         right = candidate.right
-        blocks.append(
-            f"DUPLICATE score={candidate.score:.2f}\n"
-            f"  {left.file}:{left.start_line}-{left.end_line}\n"
-            f"  {right.file}:{right.start_line}-{right.end_line}"
-        )
+        spans = [left, right, *candidate.others]
+        copies = f" copies={len(spans)}" if candidate.others else ""
+        lines = [f"  {span.file}:{span.start_line}-{span.end_line}" for span in spans]
+        blocks.append("\n".join([f"DUPLICATE score={candidate.score:.2f}{copies}", *lines]))
     return "\n\n".join(blocks) + "\n"
 
 
@@ -41,6 +40,12 @@ def _span_edn(span) -> str:
     )
 
 
+def _others_edn(candidate: Duplicate) -> list[str]:
+    if not candidate.others:
+        return []
+    return ["  :others [" + " ".join(_span_edn(span) for span in candidate.others) + "]"]
+
+
 def _candidate_edn(candidate: Duplicate) -> str:
     return "\n".join(
         [
@@ -48,6 +53,7 @@ def _candidate_edn(candidate: Duplicate) -> str:
             f"  :language {_edn_string(candidate.language)}",
             f"  :left {_span_edn(candidate.left)}",
             f"  :right {_span_edn(candidate.right)}",
+            *_others_edn(candidate),
             f"  :left-nodes {candidate.left_nodes}",
             f"  :right-nodes {candidate.right_nodes}}}",
         ]
