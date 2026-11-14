@@ -38,6 +38,8 @@ Options:
                                 Default: the current directory.
   -s, --source-root <path>      Walk this tree instead of the project root.
                                 May be repeated.
+  --group-identical             Report forms with identical structure (score
+                                1.00) once as a group, not as every pair.
   --changed                     Compare added and modified source files from
                                 git status.
   --threshold N                 Minimum similarity score, default 0.82.
@@ -81,6 +83,7 @@ class Options:
     min_nodes: int = 20
     format: str = "text"
     changed: bool = False
+    group_identical: bool = False
 
 
 def _take(args: list[str], index: int, option: str) -> str:
@@ -145,6 +148,10 @@ def parse_args(argv: list[str] | None = None) -> Options:
                 continue
             if arg == "--text":
                 options.format = "text"
+                index += 1
+                continue
+            if arg == "--group-identical":
+                options.group_identical = True
                 index += 1
                 continue
             if arg == "--changed":
@@ -306,7 +313,7 @@ def run(argv: list[str] | None = None) -> int:
     entries, warnings = scan_files(files, root, options.min_lines, options.min_nodes)
     for warning in warnings:
         print(f"dryer: {warning}", file=sys.stderr)
-    candidates = find_duplicates(entries, options.threshold)
+    candidates = find_duplicates(entries, options.threshold, options.group_identical)
     metrics = write_metrics(candidates, root)
     if options.format == "edn":
         print(render_edn(candidates), end="")
