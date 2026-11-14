@@ -99,6 +99,7 @@ DUPLICATE score=0.89
 | Java | methods with a body | constructors, abstract methods, methods inside anonymous or local classes |
 | Go | functions and methods with a body | function literals stay inside the enclosing function |
 | TypeScript | functions, methods, and top-level arrow functions | callbacks nested inside another function |
+| JavaScript (`.js` `.jsx` `.mjs` `.cjs`) | functions, methods, and top-level arrow functions, as for TypeScript | callbacks nested inside another function, `.test.` and `.spec.` files |
 | Rust | functions and methods with a body | functions inside `mod tests`, and closures |
 | Python | functions and methods | functions nested inside another function |
 
