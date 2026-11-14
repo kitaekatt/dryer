@@ -116,6 +116,7 @@ _OPERATORS = {
 _CALLS = {
     "call",
     "call_expression",
+    "attribute_call",
     "method_invocation",
     "object_creation_expression",
     "new_expression",

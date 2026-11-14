@@ -130,6 +130,17 @@ def _typescript_nodes(data: bytes, root) -> list:
     return found
 
 
+def _gdscript_nodes(data: bytes, root) -> list:
+    """Functions, constructors and inner-class methods. Lambdas are not forms."""
+
+    return [
+        node
+        for node in descendants(root)
+        if node.type in {"function_definition", "constructor_definition"}
+        and _has(node, "body")
+    ]
+
+
 def _rust_nodes(data: bytes, root) -> list:
     found = []
     for node in descendants(root):
@@ -149,6 +160,7 @@ _PICKERS = {
     "python": ("python", _python_nodes),
     "typescript": (_grammar, _typescript_nodes),
     "rust": ("rust", _rust_nodes),
+    "gdscript": ("gdscript", _gdscript_nodes),
 }
 
 
