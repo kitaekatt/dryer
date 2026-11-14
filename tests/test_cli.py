@@ -471,3 +471,14 @@ def test_group_identical_keeps_a_lone_identical_pair_unchanged(tmp_path, capsys)
     plain = capsys.readouterr().out
     assert run([*args, "--group-identical"]) == 0
     assert capsys.readouterr().out == plain
+
+
+def test_exclude_and_group_identical_work_together(tmp_path, capsys):
+    for name in ("a", "b", "c"):
+        write_source(tmp_path, f"{name}.py", COPY.format(n=name))
+    write_source(tmp_path, "copied/guard.py", COPY.format(n="guard"))
+    args = ["--root", str(tmp_path), *GROUP_ARGS, "--group-identical"]
+    assert run([*args, "--exclude", "copied/*"]) == 0
+    assert capsys.readouterr().out == "DUPLICATE score=1.00 copies=3\n  a.py:1-4\n  b.py:1-4\n  c.py:1-4\n"
+    assert run(args) == 0
+    assert "copies=4" in capsys.readouterr().out
