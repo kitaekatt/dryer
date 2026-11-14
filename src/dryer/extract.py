@@ -25,6 +25,7 @@ _DEFINITION_PARENTS = {
     "variable_declarator",
     "public_field_definition",
     "property_definition",
+    "field_definition",
 }
 
 
@@ -148,6 +149,7 @@ _PICKERS = {
     "go": ("go", _go_nodes),
     "python": ("python", _python_nodes),
     "typescript": (_grammar, _typescript_nodes),
+    "javascript": ("javascript", _typescript_nodes),
     "rust": ("rust", _rust_nodes),
 }
 
